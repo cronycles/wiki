@@ -15,23 +15,23 @@
 - [ ] Document rollback commands for code-only deploy failure.
 
 ## 3. Repository Hygiene
-- [ ] Ensure runtime artifacts are ignored by git (backup folders, extracted data, cache-like files).
+- [x] Ensure runtime artifacts are ignored by git (backup folders, extracted data, cache-like files).
 - [ ] Decide whether full `extensions/` is tracked or partially managed.
-- [ ] Ensure secrets are not committed (`LocalSettings.php` strategy).
+- [x] Ensure secrets are not committed (`LocalSettings.php` strategy).
 - [ ] Define release tagging convention.
 
 ## 4. Deploy Strategy Definition
-- [ ] Define deploy trigger: push to `main`.
-- [ ] Define transport: SSH on port `2299`.
-- [ ] Define deploy destination: `/home/crointhe/public_html/w`.
-- [ ] Define non-overwrite/non-delete exclusions for `images/`, `LocalSettings.php`, and `/home/crointhe/data`.
+- [x] Define deploy trigger: push to `main`.
+- [x] Define transport: cPanel UAPI (`VersionControl/update` + `VersionControlDeployment/create`).
+- [x] Define deploy destination: `/home/crointhe/public_html/w`.
+- [x] Define non-overwrite/non-delete exclusions for `images/`, `LocalSettings.php`, and `/home/crointhe/data`.
 - [ ] Define post-deploy smoke checks (`Special:Version`, page edit, save, render).
 
 ## 5. CI/CD Implementation
-- [ ] Add deploy workflow file in repository (GitHub Actions or equivalent).
-- [ ] Add required repository secrets (SSH key, host, user, port).
+- [x] Add deploy workflow file in repository (GitHub Actions or equivalent).
+- [ ] Add required repository secrets (`CPANEL_USER`, `CPANEL_TOKEN`, optional host/repository path).
 - [ ] Add dry-run deploy mode for staging/test.
-- [ ] Add failure notifications and rollback instruction output.
+- [x] Add failure notifications and rollback instruction output.
 
 ## 6. Staging and Production Validation
 - [ ] Validate full deploy flow in staging path/server.

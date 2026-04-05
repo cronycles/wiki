@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - bash /home/crointhe/repositories/wiki/scripts/deploy.sh

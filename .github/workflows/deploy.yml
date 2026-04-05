@@ -1,0 +1,69 @@
+name: Deploy wiki to production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mediawiki/**'
+      - 'scripts/deploy.sh'
+      - '.cpanel.yml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Trigger cPanel deploy tasks
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: ${{ secrets.CPANEL_HOST != '' && secrets.CPANEL_HOST || 'crointhemorning.com' }}
+      REPOSITORY_ROOT: ${{ secrets.CPANEL_REPOSITORY_ROOT != '' && secrets.CPANEL_REPOSITORY_ROOT || '/home/crointhe/repositories/wiki' }}
+
+    steps:
+      - name: Pull latest commit in cPanel repository
+        run: |
+          RESPONSE=$(curl -k -s -w "\nHTTP_CODE:%{http_code}" \
+            -H "Authorization: cpanel ${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_TOKEN }}" \
+            "https://${CPANEL_HOST}:2083/execute/VersionControl/update?repository_root=${REPOSITORY_ROOT}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | sed '/HTTP_CODE:/d')
+
+          echo "HTTP: $HTTP_CODE"
+          echo "Body: $BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "HTTP error: $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Wait for repository update
+        run: sleep 15
+
+      - name: Execute cPanel deployment tasks (.cpanel.yml)
+        run: |
+          RESPONSE=$(curl -k -s -w "\nHTTP_CODE:%{http_code}" \
+            -H "Authorization: cpanel ${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_TOKEN }}" \
+            "https://${CPANEL_HOST}:2083/execute/VersionControlDeployment/create?repository_root=${REPOSITORY_ROOT}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | sed '/HTTP_CODE:/d')
+
+          echo "HTTP: $HTTP_CODE"
+          echo "Body: $BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "HTTP error: $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "$BODY" | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    if data.get('status') == 1:
+        print('Deployment completed successfully')
+    else:
+        print('Deployment failed:', data)
+        sys.exit(1)
+except Exception as exc:
+    print('Cannot parse deployment response:', exc)
+    sys.exit(1)
+"

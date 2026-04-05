@@ -13,9 +13,9 @@
 - Should production deploy require manual approval in CI?
 
 ## CI/CD Technical Details
-- Which CI runner will execute deployment (GitHub-hosted vs self-hosted)?
-- Which SSH key will be dedicated to deploy automation?
-- Is `rsync` available in CI runner and target host, or should workflow use `scp` + remote unpack?
+- Confirm `CPANEL_USER` and `CPANEL_TOKEN` are set in GitHub Actions secrets.
+- Confirm cPanel repository root path for this repo (default `/home/crointhe/repositories/wiki`).
+- Do we keep default cPanel host `crointhemorning.com`, or override with `CPANEL_HOST`?
 
 ## Files and Secrets Policy
 - Should `LocalSettings.php` be fully unmanaged in git, or replaced with `LocalSettings.php.template`?
@@ -26,6 +26,10 @@
 - What is the staging target path/server for pre-production validation?
 - What is the maximum acceptable production downtime for rollback?
 - Do we need one-click rollback to previous release artifact?
+
+## Deploy Safety Checks
+- Do we want `maintenance/run.php update --quick` to be mandatory (current behavior), or soft-fail?
+- Should we add an automatic smoke-test step after deploy (`Special:Version` + edit/save test page)?
 
 ## Editor UX Scope
 - Keep WikiEditor toolbar only, or enforce VisualEditor as default for all users?
