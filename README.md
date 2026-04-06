@@ -1,6 +1,7 @@
 # Wiki Repository
 
 This repository is the canonical source for the MediaWiki deployment workflow.
+<!-- deploy-test: 2026-04-06 -->
 
 ## Root structure
 - `docs/`: roadmap, decisions, checklist, and operational notes.
