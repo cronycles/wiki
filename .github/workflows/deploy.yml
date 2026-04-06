@@ -7,76 +7,39 @@ on:
 
 jobs:
   deploy:
-    name: Trigger cPanel deploy tasks
+    name: Deploy via SSH
     runs-on: ubuntu-latest
-    env:
-      CPANEL_HOST: ${{ secrets.CPANEL_HOST != '' && secrets.CPANEL_HOST || 'crointhemorning.com' }}
-      # This is the cPanel git repository path, not the public web root.
-      REPOSITORY_ROOT: ${{ secrets.CPANEL_REPOSITORY_ROOT != '' && secrets.CPANEL_REPOSITORY_ROOT || '/home/crointhe/repositories/wiki' }}
-      EXPECTED_SHA: ${{ github.sha }}
 
     steps:
-      - name: Pull latest commit in cPanel repository and verify SHA
+      - name: Setup SSH key
         run: |
-          MATCHED=0
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p 2299 crointhemorning.com >> ~/.ssh/known_hosts 2>/dev/null
 
-          for ATTEMPT in 1 2 3; do
-            RESPONSE=$(curl -k -s -w "\nHTTP_CODE:%{http_code}" \
-              -X POST \
-              -H "Authorization: cpanel ${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_TOKEN }}" \
-              -H "Content-Type: application/x-www-form-urlencoded" \
-              --data-urlencode "repository_root=${REPOSITORY_ROOT}" \
-              "https://${CPANEL_HOST}:2083/execute/VersionControl/update")
-
-            HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-            BODY=$(echo "$RESPONSE" | sed '/HTTP_CODE:/d')
-
-            echo "Attempt $ATTEMPT HTTP: $HTTP_CODE"
-            echo "Body: $BODY"
-            if [ "$HTTP_CODE" != "200" ]; then
-              echo "HTTP error: $HTTP_CODE"
-              exit 1
-            fi
-
-            REMOTE_SHA=$(echo "$BODY" | python3 -c "import json,sys; d=json.load(sys.stdin); print((((d.get('data') or {}).get('last_update') or {}).get('identifier') or '') )")
-            echo "Expected SHA: $EXPECTED_SHA"
-            echo "Remote SHA:   $REMOTE_SHA"
-
-            if [ "$REMOTE_SHA" = "$EXPECTED_SHA" ]; then
-              MATCHED=1
-              break
-            fi
-
-            sleep 5
-          done
-
-          if [ "$MATCHED" != "1" ]; then
-            echo "Repository SHA mismatch after update attempts."
-            echo "Continuing anyway: server deploy script will clean repository and run git pull before publishing to /w."
-          fi
-
-      - name: Execute cPanel deployment tasks (.cpanel.yml)
+      - name: Deploy on server
         run: |
-          RESPONSE=$(curl -k -s -w "\nHTTP_CODE:%{http_code}" \
-            -X POST \
-            -H "Authorization: cpanel ${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_TOKEN }}" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            --data-urlencode "repository_root=${REPOSITORY_ROOT}" \
-            "https://${CPANEL_HOST}:2083/execute/VersionControlDeployment/create")
+          ssh -i ~/.ssh/deploy_key -p 2299 \
+            -o StrictHostKeyChecking=accept-new \
+            crointhe@crointhemorning.com \
+            'set -e
+             cd /home/crointhe/repositories/wiki
+             git fetch origin main
+             git pull --ff-only origin main
+             bash /home/crointhe/repositories/wiki/scripts/deploy.sh'
 
-          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
-          BODY=$(echo "$RESPONSE" | sed '/HTTP_CODE:/d')
-
-          echo "HTTP: $HTTP_CODE"
-          echo "Body: $BODY"
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "HTTP error: $HTTP_CODE"
+      - name: Verify deploy marker matches commit
+        run: |
+          EXPECTED_SHA="${{ github.sha }}"
+          DEPLOY_SHA=$(ssh -i ~/.ssh/deploy_key -p 2299 \
+            -o StrictHostKeyChecking=accept-new \
+            crointhe@crointhemorning.com \
+            'cat /home/crointhe/public_html/w/.deploy-last-commit')
+          echo "Expected: $EXPECTED_SHA"
+          echo "Deployed: $DEPLOY_SHA"
+          if [ "$DEPLOY_SHA" != "$EXPECTED_SHA" ]; then
+            echo "ERROR: deploy marker does not match commit SHA"
             exit 1
           fi
-
-          DEPLOY_ID=$(echo "$BODY" | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('data') or {}).get('deploy_id') or ''))")
-          LOG_PATH=$(echo "$BODY" | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('data') or {}).get('log_path') or ''))")
-          echo "Deploy ID: $DEPLOY_ID"
-          echo "Deploy log path: $LOG_PATH"
-
-          python3 -c "import json,sys; data=json.load(sys.stdin); ok=(data.get('status')==1); print('Deployment completed successfully' if ok else ('Deployment failed: %s' % data)); sys.exit(0 if ok else 1)" <<<"$BODY"
+          echo "OK: deploy confirmed in /w"
