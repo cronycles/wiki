@@ -15,6 +15,8 @@ rm -f error_log
 git reset --hard
 git clean -fd
 git pull --ff-only origin main || git pull origin main
+CURRENT_SHA=$(git rev-parse HEAD)
+echo "Deploying commit: $CURRENT_SHA"
 
 if [ ! -d "$SRC" ]; then
   echo "[ERROR] Source path not found: $SRC"
@@ -40,6 +42,11 @@ tar -C "$SRC" -cf "$TMP_DIR/deploy.tar" \
 
 tar -C "$DEST" -xf "$TMP_DIR/deploy.tar"
 
+if ! cmp -s "$SRC/index.php" "$DEST/index.php"; then
+  echo "[ERROR] Deploy verification failed: index.php mismatch between source and destination"
+  exit 1
+fi
+
 echo "=== Step 2: post-deploy checks ==="
 if [ ! -f "$DEST/LocalSettings.php" ]; then
   echo "[ERROR] LocalSettings.php missing in destination after deploy"
@@ -51,5 +58,9 @@ if [ -x "$PHP" ] && [ -f "$DEST/maintenance/run.php" ]; then
 else
   echo "[WARN] PHP binary or maintenance script not found, skipping update.php"
 fi
+
+echo "$CURRENT_SHA" > "$DEST/.deploy-last-commit"
+date -u +"%Y-%m-%dT%H:%M:%SZ" > "$DEST/.deploy-last-ts"
+echo "Wrote deploy markers: $DEST/.deploy-last-commit and $DEST/.deploy-last-ts"
 
 echo "=== Deploy MediaWiki: completed ==="

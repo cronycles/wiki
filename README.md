@@ -12,8 +12,15 @@ This repository is the canonical source for the MediaWiki deployment workflow.
 - Server-side deploy script: `scripts/deploy.sh`
 
 ### Trigger
-- Push to `main` touching `mediawiki/**`, `scripts/deploy.sh`, `.cpanel.yml`, or workflow file.
+- Every push to `main`.
 - Manual run via `workflow_dispatch`.
+
+### Deploy verification
+After successful deploy, the script writes markers in production web root:
+- `/home/crointhe/public_html/w/.deploy-last-commit`
+- `/home/crointhe/public_html/w/.deploy-last-ts`
+
+The commit marker must match the commit hash of the workflow run.
 
 ### Runtime-safe exclusions
 The deploy script excludes and preserves:
