@@ -55,8 +55,4 @@ jobs:
             exit 1
           fi
 
-          python3 -c "import json,sys; \
-data=json.load(sys.stdin); \
-ok=(data.get('status')==1); \
-print('Deployment completed successfully' if ok else f'Deployment failed: {data}'); \
-sys.exit(0 if ok else 1)" <<<"$BODY"
+          python3 -c "import json,sys; data=json.load(sys.stdin); ok=(data.get('status')==1); print('Deployment completed successfully' if ok else ('Deployment failed: %s' % data)); sys.exit(0 if ok else 1)" <<<"$BODY"
