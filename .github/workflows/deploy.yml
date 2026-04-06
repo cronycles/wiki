@@ -1,4 +1,5 @@
 name: Deploy wiki to production
+# Trigger note: path-filtered workflow, touch this file to force a push-triggered run.
 
 on:
   push:
