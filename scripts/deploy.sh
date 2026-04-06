@@ -4,6 +4,7 @@ set -euo pipefail
 PHP="/opt/cpanel/ea-php84/root/usr/bin/php"
 REPO="/home/crointhe/repositories/wiki"
 SRC="$REPO/mediawiki"
+# Production web root for the wiki application.
 DEST="/home/crointhe/public_html/w"
 
 echo "=== Deploy MediaWiki: start ==="

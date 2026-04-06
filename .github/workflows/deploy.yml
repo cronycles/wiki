@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: ${{ secrets.CPANEL_HOST != '' && secrets.CPANEL_HOST || 'crointhemorning.com' }}
+      # This is the cPanel git repository path, not the public web root.
       REPOSITORY_ROOT: ${{ secrets.CPANEL_REPOSITORY_ROOT != '' && secrets.CPANEL_REPOSITORY_ROOT || '/home/crointhe/repositories/wiki' }}
 
     steps:
