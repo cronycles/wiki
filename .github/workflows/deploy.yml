@@ -55,16 +55,8 @@ jobs:
             exit 1
           fi
 
-          echo "$BODY" | python3 -c "
-import json, sys
-try:
-    data = json.load(sys.stdin)
-    if data.get('status') == 1:
-        print('Deployment completed successfully')
-    else:
-        print('Deployment failed:', data)
-        sys.exit(1)
-except Exception as exc:
-    print('Cannot parse deployment response:', exc)
-    sys.exit(1)
-"
+          python3 -c "import json,sys; \
+data=json.load(sys.stdin); \
+ok=(data.get('status')==1); \
+print('Deployment completed successfully' if ok else f'Deployment failed: {data}'); \
+sys.exit(0 if ok else 1)" <<<"$BODY"
